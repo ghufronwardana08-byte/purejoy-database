@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purejoy — Database Reservasi</title>
+<style>
+  :root {
+    --bg: #FAF8F5; --surface: #FFFFFF; --surface2: #F3F0EC;
+    --border: #E8E3DC; --text: #2C2218; --text2: #7A6E64;
+    --accent: #8B5E3C; --accent-light: #F5EDE5;
+    --green: #2D6A4F; --green-light: #E8F5EE;
+    --red: #9B2335; --red-light: #FCEEF0;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
+  .logo h1 { font-size: 16px; font-weight: 600; }
+  .logo p { font-size: 12px; color: var(--text2); }
+  .conn-status { font-size: 12px; padding: 4px 10px; border-radius: 99px; font-weight: 500; }
+  .conn-status.ok { background: var(--green-light); color: var(--green); }
+  .conn-status.err { background: var(--red-light); color: var(--red); }
+  .conn-status.loading { background: var(--surface2); color: var(--text2); }
+
+  .header-stats { display: flex; gap: 20px; }
+  .hstat { text-align: center; }
+  .hstat .n { font-size: 20px; font-weight: 600; color: var(--accent); }
+  .hstat .l { font-size: 11px; color: var(--text2); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: var(--radius); padding: 4px; margin-bottom: 20px; }
+  .tab { flex: 1; text-align: center; padding: 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text2); border: none; background: none; }
+  .tab.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card h3 { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+
+  textarea { width: 100%; min-height: 200px; font-family: 'Courier New', monospace; font-size: 12.5px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: var(--surface2); color: var(--text); resize: vertical; line-height: 1.7; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  .field input, .field select { font-size: 13px; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); }
+  .field input:focus { outline: none; border-color: var(--accent); }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer; font-weight: 500; }
+  .btn:hover { background: var(--surface2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .btn.primary:hover { background: #7A5235; }
+  .btn.green { background: var(--green); border-color: var(--green); color: white; }
+  .btn.green:hover { background: #245C43; }
+  .btn.danger { color: var(--red); border-color: #E8C0C5; }
+  .btn.danger:hover { background: var(--red-light); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .alert { font-size: 13px; padding: 9px 13px; border-radius: var(--radius-sm); margin-top: 10px; display: none; }
+  .alert.success { background: var(--green-light); color: var(--green); border: 1px solid #B7DFC9; }
+  .alert.error { background: var(--red-light); color: var(--red); border: 1px solid #F0C4CA; }
+  .alert.info { background: #EEF3FB; color: #1A4A8A; border: 1px solid #B5CFEF; }
+
+  .setup-box { background: #FFF9F0; border: 1px solid #F0D9B0; border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+  .setup-box h3 { font-size: 15px; font-weight: 600; color: #7A4A10; margin-bottom: 10px; }
+  .setup-box p { font-size: 13px; color: #5A3A10; margin-bottom: 10px; line-height: 1.7; }
+  .setup-box input { width: 100%; font-size: 13px; padding: 9px 12px; border: 1px solid #E0C090; border-radius: var(--radius-sm); background: white; color: var(--text); margin-bottom: 8px; }
+  .setup-box input:focus { outline: none; border-color: var(--accent); }
+
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { font-size: 11.5px; font-weight: 600; color: var(--text2); text-align: left; padding: 8px 10px; border-bottom: 1.5px solid var(--border); white-space: nowrap; background: var(--surface2); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:hover td { background: var(--accent-light); cursor: pointer; }
+  .badge { font-size: 11px; padding: 2px 9px; border-radius: 99px; display: inline-block; font-weight: 500; }
+  .badge.mom { background: #F5EDE5; color: #7A4020; }
+  .badge.baby { background: var(--green-light); color: var(--green); }
+  .badge.newborn { background: #EDE8F5; color: #4A3580; }
+  .empty-state { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; }
+
+  .search-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .search-bar input { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg); color: var(--text); }
+  .search-bar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg); color: var(--text); }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .detail-modal { display: none; position: fixed; inset: 0; background: rgba(44,34,24,.45); z-index: 200; align-items: center; justify-content: center; }
+  .detail-modal.open { display: flex; }
+  .modal-box { background: var(--surface); border-radius: var(--radius); padding: 24px; max-width: 540px; width: 90%; max-height: 85vh; overflow-y: auto; }
+  .modal-box h2 { font-size: 16px; margin-bottom: 16px; }
+  .modal-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .modal-row .ml { color: var(--text2); min-width: 140px; }
+  .modal-row .mv { color: var(--text); font-weight: 500; }
+
+  @media (max-width: 600px) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .header-stats { display: none; }
+    header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌸</div>
+    <div>
+      <h1>Purejoy Mom & Baby Care</h1>
+      <p>Database Reservasi</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span class="conn-status loading" id="conn-status">Mengecek koneksi...</span>
+    <div class="header-stats">
+      <div class="hstat"><div class="n" id="h-total">-</div><div class="l">Total Data</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- SETUP BOX (muncul jika URL belum diset) -->
+  <div class="setup-box" id="setup-box">
+    <h3>⚙️ Setup Awal — Masukkan URL Google Apps Script</h3>
+    <p>Ikuti panduan di file <strong>PANDUAN_SETUP.txt</strong> untuk mendapatkan URL ini. URL hanya perlu diisi sekali dan akan tersimpan otomatis.</p>
+    <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+    <div class="btn-row" style="margin-top:0;">
+      <button class="btn primary" onclick="saveScriptUrl()">💾 Simpan & Hubungkan</button>
+    </div>
+    <div class="alert" id="alert-setup"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('input')">✦ Input Reservasi</button>
+    <button class="tab" onclick="switchTab('database')">☰ Database</button>
+    <button class="tab" onclick="switchTab('export')">↓ Export</button>
+  </div>
+
+  <!-- TAB INPUT -->
+  <div class="panel active" id="tab-input">
+    <div class="card">
+      <h3>Paste Chat WA Reservasi</h3>
+      <textarea id="raw" placeholder="Copy chat WA reservasi dari HP, lalu paste di sini...
+
+Contoh:
+*RESERVASI PUREJOY'S TREATMENTS*
+*Tanggapan* #10175
+*Nama Lengkap :* Ike Novrida Wahyuni
+...
+
+Setelah paste, klik Parse Otomatis."></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="parseWA()">⚡ Parse Otomatis</button>
+        <button class="btn" onclick="clearRaw()">✕ Bersihkan</button>
+      </div>
+      <div class="alert" id="alert-parse"></div>
+    </div>
+
+    <div class="card" id="form-section" style="display:none;">
+      <h3>Verifikasi Data — koreksi jika ada yang salah</h3>
+      <div class="grid2" style="margin-bottom:12px;">
+        <div class="field"><label>No. Tanggapan</label><input id="f-no" type="text"></div>
+        <div class="field"><label>Area Reservasi</label><input id="f-area" type="text"></div>
+      </div>
+      <div class="grid2" style="margin-bottom:12px;">
+        <div class="field"><label>Nama Lengkap *</label><input id="f-nama" type="text"></div>
+        <div class="field"><label>Tanggal Lahir</label><input id="f-tgl" type="text"></div>
+      </div>
+      <div class="grid2" style="margin-bottom:12px;">
+        <div class="field"><label>Jenis Kelamin</label><input id="f-jk" type="text"></div>
+        <div class="field"><label>No HP</label><input id="f-hp" type="text"></div>
+      </div>
+      <div class="field" style="margin-bottom:12px;"><label>Alamat Lengkap</label><input id="f-alamat" type="text"></div>
+      <div class="grid2" style="margin-bottom:12px;">
+        <div class="field"><label>Jenis Treatment</label><input id="f-treatment" type="text"></div>
+        <div class="field"><label>Tanggal & Jam Reservasi</label><input id="f-reservasi" type="text"></div>
+      </div>
+      <div class="grid3" style="margin-bottom:12px;">
+        <div class="field"><label>Keluhan Mams</label><input id="f-keluhan-m" type="text"></div>
+        <div class="field"><label>Keluhan Baby</label><input id="f-keluhan-b" type="text"></div>
+        <div class="field"><label>Riwayat Kesehatan</label><input id="f-riwayat" type="text"></div>
+      </div>
+      <div class="grid2" style="margin-bottom:12px;">
+        <div class="field"><label>Purejoy dari mana?</label><input id="f-sumber" type="text"></div>
+        <div class="field"><label>Catatan Tambahan</label><input id="f-catatan" type="text"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn green" id="btn-save" onclick="saveRecord()">💾 Simpan ke Google Sheets</button>
+        <button class="btn" onclick="resetForm()">✕ Batal</button>
+      </div>
+      <div class="alert" id="alert-save"></div>
+    </div>
+  </div>
+
+  <!-- TAB DATABASE -->
+  <div class="panel" id="tab-database">
+    <div class="card">
+      <h3>Semua Data Pelanggan</h3>
+      <div class="search-bar">
+        <input type="text" id="search" placeholder="Cari nama, HP, area..." oninput="filterTable()">
+        <select id="filter-area" onchange="filterTable()">
+          <option value="">Semua Area</option>
+          <option value="padang">Padang</option>
+          <option value="payakumbuh">Payakumbuh</option>
+        </select>
+        <select id="filter-treatment" onchange="filterTable()">
+          <option value="">Semua Treatment</option>
+          <option value="mom">Mom's Treatment</option>
+          <option value="baby">Baby's Treatment</option>
+          <option value="newborn">Newborn Care</option>
+        </select>
+        <button class="btn" onclick="loadFromSheet()">↻ Refresh</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px;">No</th>
+              <th style="width:70px;">Tanggapan</th>
+              <th style="width:150px;">Nama</th>
+              <th style="width:110px;">Area</th>
+              <th style="width:120px;">Treatment</th>
+              <th style="width:115px;">Reservasi</th>
+              <th style="width:90px;">Sumber</th>
+              <th style="width:110px;">No HP</th>
+            </tr>
+          </thead>
+          <tbody id="db-body">
+            <tr><td colspan="8"><div class="empty-state">Klik Refresh untuk memuat data dari Google Sheets.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB EXPORT -->
+  <div class="panel" id="tab-export">
+    <div class="card">
+      <h3>Export Data</h3>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">Data utama tersimpan di Google Sheets Anda. Export ini untuk keperluan analisis atau backup tambahan.</p>
+      <div class="btn-row">
+        <button class="btn green" onclick="exportCSV()">⬇ Download CSV (Excel)</button>
+        <button class="btn" onclick="window.open(getScriptUrl().replace('/exec','').replace('macros/s/','spreadsheets/'), '_blank')">↗ Buka Google Sheet</button>
+      </div>
+      <div class="alert" id="alert-export"></div>
+      <div style="margin-top:20px;padding:14px;background:var(--surface2);border-radius:var(--radius-sm);">
+        <p style="font-size:12px;color:var(--text2);line-height:1.9;">
+          ✅ Data tersimpan langsung di <strong>Google Sheets</strong> — aman, bisa diakses dari HP/komputer manapun.<br>
+          👥 Semua admin bisa input dari file HTML yang sama.<br>
+          ⚙️ Untuk ganti URL Apps Script: <a href="#" onclick="document.getElementById('setup-box').style.display='block';return false;" style="color:var(--accent);">klik di sini</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL -->
+<div class="detail-modal" id="modal" onclick="closeModal(event)">
+  <div class="modal-box" id="modal-box">
+    <h2 id="modal-title"></h2>
+    <div id="modal-content"></div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('modal').classList.remove('open')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const URL_KEY = 'purejoy_script_url';
+let allData = [];
+
+function getScriptUrl() { return localStorage.getItem(URL_KEY) || ''; }
+
+function saveScriptUrl() {
+  const url = document.getElementById('script-url-input').value.trim();
+  if (!url.includes('script.google.com')) {
+    showAlert('alert-setup', 'URL tidak valid. Pastikan copy dari Google Apps Script.', 'error'); return;
+  }
+  localStorage.setItem(URL_KEY, url);
+  showAlert('alert-setup', 'URL tersimpan! Mengecek koneksi...', 'success');
+  setTimeout(() => { checkConnection(); document.getElementById('setup-box').style.display = 'none'; }, 1000);
+}
+
+function checkConnection() {
+  const url = getScriptUrl();
+  const el = document.getElementById('conn-status');
+  if (!url) { el.textContent = '⚠ Belum setup'; el.className = 'conn-status err'; return; }
+  el.textContent = 'Menghubungkan...'; el.className = 'conn-status loading';
+  fetch(url)
+    .then(r => r.json())
+    .then(d => {
+      if (d.status === 'success') {
+        el.textContent = '● Terhubung ke Google Sheets'; el.className = 'conn-status ok';
+        allData = d.data || [];
+        document.getElementById('h-total').textContent = allData.length;
+        document.getElementById('setup-box').style.display = 'none';
+      } else throw new Error();
+    })
+    .catch(() => { el.textContent = '✕ Gagal terhubung'; el.className = 'conn-status err'; });
+}
+
+function switchTab(name) {
+  ['input','database','export'].forEach((n,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n === name);
+    document.querySelectorAll('.panel')[i].classList.toggle('active', n === name);
+  });
+  if (name === 'database') loadFromSheet();
+}
+
+function parseWA() {
+  const raw = document.getElementById('raw').value.trim();
+  if (!raw) { showAlert('alert-parse', 'Paste chat WA terlebih dahulu.', 'error'); return; }
+
+  const get = (patterns) => {
+    for (const pattern of patterns) {
+      const regex = new RegExp(pattern + '[\\s\\*:]*([^\\n\\*]+)', 'i');
+      const m = raw.match(regex);
+      if (m && m[1].trim()) return m[1].trim();
+    }
+    return '';
+  };
+
+  const noMatch = raw.match(/#(\d{3,6})/);
+  document.getElementById('f-no').value = noMatch ? noMatch[1] : get(['Tanggapan']);
+  document.getElementById('f-area').value = get(['Reservasi daerah mana Mams','daerah mana']);
+  document.getElementById('f-nama').value = get(['Nama Lengkap']);
+  document.getElementById('f-tgl').value = get(['Tanggal Lahir']);
+  document.getElementById('f-jk').value = get(['Jenis kelamin']);
+  document.getElementById('f-alamat').value = get(['Alamat Lengkap']);
+  document.getElementById('f-hp').value = get(['No HP','No\\.? HP','Nomor HP']);
+  document.getElementById('f-keluhan-m').value = get(['Keluhan Mams']);
+  document.getElementById('f-keluhan-b').value = get(['Keluhan Baby']);
+  document.getElementById('f-riwayat').value = get(['Riwayat Kesehatan Mams\\/ Baby','Riwayat Kesehatan']);
+  document.getElementById('f-treatment').value = get(['Jenis treatment']);
+  document.getElementById('f-reservasi').value = get(['Kapan rencana akan reservasi','rencana akan reservasi']);
+  document.getElementById('f-sumber').value = get(['PureJoy dari mana','dari mana']);
+  document.getElementById('f-catatan').value = get(['catatan jika ada','catatan']);
+
+  document.getElementById('form-section').style.display = 'block';
+  showAlert('alert-parse', 'Berhasil diparse! Cek data, koreksi jika perlu, lalu klik Simpan.', 'success');
+  document.getElementById('form-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function saveRecord() {
+  const url = getScriptUrl();
+  if (!url) { showAlert('alert-save', 'Setup URL Google Apps Script dulu di bagian atas.', 'error'); return; }
+  const nama = document.getElementById('f-nama').value.trim();
+  if (!nama) { showAlert('alert-save', 'Nama tidak boleh kosong.', 'error'); return; }
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Menyimpan...';
+
+  const rec = {
+    no: document.getElementById('f-no').value.trim(),
+    area: document.getElementById('f-area').value.trim(),
+    nama,
+    tgl_lahir: document.getElementById('f-tgl').value.trim(),
+    jk: document.getElementById('f-jk').value.trim(),
+    alamat: document.getElementById('f-alamat').value.trim(),
+    hp: document.getElementById('f-hp').value.trim(),
+    keluhan_m: document.getElementById('f-keluhan-m').value.trim(),
+    keluhan_b: document.getElementById('f-keluhan-b').value.trim(),
+    riwayat: document.getElementById('f-riwayat').value.trim(),
+    treatment: document.getElementById('f-treatment').value.trim(),
+    reservasi: document.getElementById('f-reservasi').value.trim(),
+    sumber: document.getElementById('f-sumber').value.trim(),
+    catatan: document.getElementById('f-catatan').value.trim(),
+    input_date: new Date().toLocaleDateString('id-ID')
+  };
+
+  fetch(url, { method: 'POST', body: JSON.stringify(rec) })
+    .then(r => r.json())
+    .then(d => {
+      if (d.status === 'success') {
+        showAlert('alert-save', `✓ Data ${nama} berhasil disimpan ke Google Sheets!`, 'success');
+        allData.push(rec);
+        document.getElementById('h-total').textContent = allData.length;
+        setTimeout(() => { resetForm(); document.getElementById('raw').value = ''; document.getElementById('alert-parse').style.display='none'; }, 1800);
+      } else throw new Error(d.message);
+    })
+    .catch(err => showAlert('alert-save', 'Gagal menyimpan: ' + err.message + '. Cek koneksi internet.', 'error'))
+    .finally(() => { btn.disabled = false; btn.innerHTML = '💾 Simpan ke Google Sheets'; });
+}
+
+function loadFromSheet() {
+  const url = getScriptUrl();
+  if (!url) return;
+  const body = document.getElementById('db-body');
+  body.innerHTML = '<tr><td colspan="8"><div class="empty-state">Memuat data...</div></td></tr>';
+  fetch(url)
+    .then(r => r.json())
+    .then(d => {
+      allData = d.data || [];
+      document.getElementById('h-total').textContent = allData.length;
+      filterTable();
+    })
+    .catch(() => { body.innerHTML = '<tr><td colspan="8"><div class="empty-state">Gagal memuat. Cek koneksi internet.</div></td></tr>'; });
+}
+
+function filterTable() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const fa = (document.getElementById('filter-area').value || '').toLowerCase();
+  const ft = (document.getElementById('filter-treatment').value || '').toLowerCase();
+
+  const colMap = {'Nama Lengkap':'nama','Area':'area','No HP':'hp','No Tanggapan':'no','Alamat':'alamat','Treatment':'treatment','Sumber Info':'sumber','Jadwal Reservasi':'reservasi'};
+
+  let filtered = allData.filter(r => {
+    const rNama = r['Nama Lengkap'] || r.nama || '';
+    const rArea = r['Area'] || r.area || '';
+    const rHP = r['No HP'] || r.hp || '';
+    const rTreatment = r['Treatment'] || r.treatment || '';
+    const combined = [rNama, rArea, rHP, r['No Tanggapan']||r.no||''].join(' ').toLowerCase();
+    return (!q || combined.includes(q)) &&
+           (!fa || rArea.toLowerCase().includes(fa)) &&
+           (!ft || rTreatment.toLowerCase().includes(ft));
+  });
+
+  const body = document.getElementById('db-body');
+  if (!filtered.length) {
+    body.innerHTML = `<tr><td colspan="8"><div class="empty-state">${allData.length ? 'Tidak ada data yang cocok.' : 'Belum ada data.'}</div></td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map((r, i) => {
+    const nama = r['Nama Lengkap'] || r.nama || '-';
+    const area = r['Area'] || r.area || '-';
+    const treatment = r['Treatment'] || r.treatment || '-';
+    const reservasi = r['Jadwal Reservasi'] || r.reservasi || '-';
+    const sumber = r['Sumber Info'] || r.sumber || '-';
+    const hp = r['No HP'] || r.hp || '-';
+    const no = r['No Tanggapan'] || r.no || '-';
+    const t = treatment.toLowerCase();
+    let bc = 'badge new', bt = 'Lainnya';
+    if (t.includes('mom')) { bc='badge mom'; bt="Mom's"; }
+    else if (t.includes('newborn')) { bc='badge newborn'; bt='Newborn'; }
+    else if (t.includes('baby')||t.includes('bayi')) { bc='badge baby'; bt='Baby'; }
+    return `<tr onclick="showDetail(${i})">
+      <td>${i+1}</td><td>${no}</td>
+      <td title="${nama}"><strong>${nama}</strong></td>
+      <td title="${area}">${area}</td>
+      <td><span class="${bc}">${bt}</span></td>
+      <td>${reservasi.toString().split(',')[0]}</td>
+      <td>${sumber}</td><td>${hp}</td>
+    </tr>`;
+  }).join('');
+  window._filteredData = filtered;
+}
+
+function showDetail(i) {
+  const r = (window._filteredData || allData)[i];
+  if (!r) return;
+  document.getElementById('modal-title').textContent = r['Nama Lengkap'] || r.nama || '-';
+  const fields = [
+    ['No. Tanggapan', r['No Tanggapan']||r.no],['Area', r['Area']||r.area],
+    ['Tanggal Lahir', r['Tanggal Lahir']||r.tgl_lahir],['Jenis Kelamin', r['Jenis Kelamin']||r.jk],
+    ['No HP', r['No HP']||r.hp],['Alamat', r['Alamat']||r.alamat],
+    ['Treatment', r['Treatment']||r.treatment],['Jadwal Reservasi', r['Jadwal Reservasi']||r.reservasi],
+    ['Keluhan Mams', r['Keluhan Mams']||r.keluhan_m],['Keluhan Baby', r['Keluhan Baby']||r.keluhan_b],
+    ['Riwayat Kesehatan', r['Riwayat Kesehatan']||r.riwayat],['Sumber Info', r['Sumber Info']||r.sumber],
+    ['Catatan', r['Catatan']||r.catatan],['Tanggal Input', r['Tanggal Input']||r.input_date]
+  ];
+  document.getElementById('modal-content').innerHTML = fields.map(([l,v]) =>
+    `<div class="modal-row"><span class="ml">${l}</span><span class="mv">${v||'-'}</span></div>`).join('');
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) { if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('open'); }
+
+function exportCSV() {
+  if (!allData.length) { showAlert('alert-export','Belum ada data. Refresh tab Database dulu.','error'); return; }
+  const headers = ['No','No Tanggapan','Area','Nama Lengkap','Tanggal Lahir','Jenis Kelamin','Alamat','No HP','Keluhan Mams','Keluhan Baby','Riwayat Kesehatan','Treatment','Jadwal Reservasi','Sumber Info','Catatan','Tanggal Input'];
+  const rows = allData.map((r,i) => [
+    i+1, r['No Tanggapan']||r.no, r['Area']||r.area, r['Nama Lengkap']||r.nama,
+    r['Tanggal Lahir']||r.tgl_lahir, r['Jenis Kelamin']||r.jk, r['Alamat']||r.alamat,
+    r['No HP']||r.hp, r['Keluhan Mams']||r.keluhan_m, r['Keluhan Baby']||r.keluhan_b,
+    r['Riwayat Kesehatan']||r.riwayat, r['Treatment']||r.treatment,
+    r['Jadwal Reservasi']||r.reservasi, r['Sumber Info']||r.sumber,
+    r['Catatan']||r.catatan, r['Tanggal Input']||r.input_date
+  ].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+  const csv = '\uFEFF' + [headers.join(','),...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'purejoy_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  showAlert('alert-export', `Berhasil export ${allData.length} data.`, 'success');
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = 'alert ' + type; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+function clearRaw() { document.getElementById('raw').value = ''; document.getElementById('form-section').style.display = 'none'; }
+function resetForm() { document.getElementById('form-section').style.display = 'none'; }
+
+// Init
+const savedUrl = getScriptUrl();
+if (savedUrl) {
+  document.getElementById('setup-box').style.display = 'none';
+  document.getElementById('script-url-input').value = savedUrl;
+  checkConnection();
+} else {
+  document.getElementById('conn-status').textContent = '⚠ Belum setup';
+  document.getElementById('conn-status').className = 'conn-status err';
+}
+</script>
+</body>
+</html>
