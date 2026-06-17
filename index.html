@@ -276,7 +276,7 @@ Setelah paste, klik Parse Otomatis."></textarea>
 const URL_KEY = 'purejoy_script_url';
 let allData = [];
 
-function getScriptUrl() { return localStorage.getItem(URL_KEY) || ''; }
+function getScriptUrl() { return localStorage.getItem(URL_KEY) || 'https://script.google.com/macros/s/AKfycbwZQt0Hxgl928vyy08IdtXKz0gxL7HXJrQaAT-nFHy1veHEakzrHxQAfTygfD1VlGiT/exec'; }
 
 function saveScriptUrl() {
   const url = document.getElementById('script-url-input').value.trim();
@@ -318,30 +318,36 @@ function parseWA() {
   const raw = document.getElementById('raw').value.trim();
   if (!raw) { showAlert('alert-parse', 'Paste chat WA terlebih dahulu.', 'error'); return; }
 
-  const get = (patterns) => {
-    for (const pattern of patterns) {
-      const regex = new RegExp(pattern + '[\\s\\*:]*([^\\n\\*]+)', 'i');
+  // Parser khusus format WA Purejoy: *Label :* Nilai
+  const get = (labels) => {
+    for (const label of labels) {
+      // Buat regex yang fleksibel: abaikan *, spasi, tanda tanya, titik dua
+      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp('\\*?' + escaped + '[\\s\\*?:]*\\*?\\s*([^\\n\\*][^\\n]*)', 'i');
       const m = raw.match(regex);
-      if (m && m[1].trim()) return m[1].trim();
+      if (m) {
+        const val = m[1].replace(/\*/g, '').trim();
+        if (val && val !== '-' && val.length > 0) return val;
+      }
     }
     return '';
   };
 
   const noMatch = raw.match(/#(\d{3,6})/);
   document.getElementById('f-no').value = noMatch ? noMatch[1] : get(['Tanggapan']);
-  document.getElementById('f-area').value = get(['Reservasi daerah mana Mams','daerah mana']);
+  document.getElementById('f-area').value = get(['Reservasi daerah mana Mams?', 'Reservasi daerah mana Mams', 'daerah mana Mams', 'daerah mana']);
   document.getElementById('f-nama').value = get(['Nama Lengkap']);
   document.getElementById('f-tgl').value = get(['Tanggal Lahir']);
   document.getElementById('f-jk').value = get(['Jenis kelamin']);
   document.getElementById('f-alamat').value = get(['Alamat Lengkap']);
-  document.getElementById('f-hp').value = get(['No HP','No\\.? HP','Nomor HP']);
+  document.getElementById('f-hp').value = get(['No HP', 'Nomor HP']);
   document.getElementById('f-keluhan-m').value = get(['Keluhan Mams']);
   document.getElementById('f-keluhan-b').value = get(['Keluhan Baby']);
-  document.getElementById('f-riwayat').value = get(['Riwayat Kesehatan Mams\\/ Baby','Riwayat Kesehatan']);
+  document.getElementById('f-riwayat').value = get(['Riwayat Kesehatan Mams/ Baby saat ini', 'Riwayat Kesehatan Mams', 'Riwayat Kesehatan']);
   document.getElementById('f-treatment').value = get(['Jenis treatment']);
-  document.getElementById('f-reservasi').value = get(['Kapan rencana akan reservasi','rencana akan reservasi']);
-  document.getElementById('f-sumber').value = get(['PureJoy dari mana','dari mana']);
-  document.getElementById('f-catatan').value = get(['catatan jika ada','catatan']);
+  document.getElementById('f-reservasi').value = get(['Kapan rencana akan reservasi', 'rencana akan reservasi']);
+  document.getElementById('f-sumber').value = get(['Mams tau PureJoy dari mana?', 'Mams tau PureJoy dari mana', 'PureJoy dari mana', 'dari mana']);
+  document.getElementById('f-catatan').value = get(['Tambahkan catatan jika ada kebutuhan khusus atau permintaan lainnya', 'catatan jika ada', 'catatan']);
 
   document.getElementById('form-section').style.display = 'block';
   showAlert('alert-parse', 'Berhasil diparse! Cek data, koreksi jika perlu, lalu klik Simpan.', 'success');

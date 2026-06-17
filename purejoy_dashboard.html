@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purejoy — Dashboard Analitik</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #FAF8F5; --surface: #FFFFFF; --surface2: #F3F0EC;
+    --border: #E8E3DC; --text: #2C2218; --text2: #7A6E64;
+    --accent: #8B5E3C; --accent-light: #F5EDE5;
+    --rose: #C4526A; --rose-light: #FBEEF2;
+    --green: #2D6A4F; --green-light: #E8F5EE;
+    --gold: #B8860B; --gold-light: #FDF8E7;
+    --purple: #5B4E8A; --purple-light: #EEEAF8;
+    --radius: 12px; --radius-sm: 7px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
+  .logo h1 { font-size: 16px; font-weight: 600; }
+  .logo p { font-size: 12px; color: var(--text2); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .conn-badge { font-size: 12px; padding: 4px 10px; border-radius: 99px; font-weight: 500; background: var(--green-light); color: var(--green); }
+  .btn-refresh { font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+  .btn-refresh:hover { background: var(--surface2); }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px 16px; }
+
+  /* KPI Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .kpi .icon { font-size: 20px; margin-bottom: 8px; }
+  .kpi .val { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .kpi .lbl { font-size: 12px; color: var(--text2); }
+  .kpi .sub { font-size: 11px; margin-top: 6px; padding: 2px 8px; border-radius: 99px; display: inline-block; }
+  .kpi.rose .val { color: var(--rose); } .kpi.rose .sub { background: var(--rose-light); color: var(--rose); }
+  .kpi.green .val { color: var(--green); } .kpi.green .sub { background: var(--green-light); color: var(--green); }
+  .kpi.gold .val { color: var(--gold); } .kpi.gold .sub { background: var(--gold-light); color: var(--gold); }
+  .kpi.purple .val { color: var(--purple); } .kpi.purple .sub { background: var(--purple-light); color: var(--purple); }
+
+  /* Chart grid */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .card h3 { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px; }
+  .card-full { grid-column: 1 / -1; }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap-sm { position: relative; height: 180px; }
+
+  /* Revenue table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-size: 11px; font-weight: 600; color: var(--text2); text-align: left; padding: 7px 10px; border-bottom: 1.5px solid var(--border); background: var(--surface2); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; display: inline-block; font-weight: 500; }
+  .badge.mom { background: var(--accent-light); color: var(--accent); }
+  .badge.baby { background: var(--green-light); color: var(--green); }
+  .badge.newborn { background: var(--purple-light); color: var(--purple); }
+
+  /* Top list */
+  .top-list { list-style: none; }
+  .top-list li { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .top-list li:last-child { border-bottom: none; }
+  .top-list .rank { width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0; }
+  .top-list .rank.gold-rank { background: var(--gold-light); color: var(--gold); }
+  .top-list .name { flex: 1; }
+  .top-list .count { font-weight: 600; color: var(--accent); }
+
+  /* Loading */
+  .loading { text-align: center; padding: 60px; color: var(--text2); }
+  .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Setup */
+  .setup-box { background: #FFF9F0; border: 1px solid #F0D9B0; border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+  .setup-box h3 { font-size: 15px; font-weight: 600; color: #7A4A10; margin-bottom: 8px; }
+  .setup-box p { font-size: 13px; color: #5A3A10; margin-bottom: 10px; }
+  .setup-box input { width: 100%; font-size: 13px; padding: 9px 12px; border: 1px solid #E0C090; border-radius: var(--radius-sm); background: white; color: var(--text); margin-bottom: 8px; }
+  .btn-primary { padding: 8px 16px; border-radius: var(--radius-sm); border: none; background: var(--accent); color: white; font-size: 13px; cursor: pointer; font-weight: 500; }
+
+  /* Revenue estimasi */
+  .rev-highlight { background: linear-gradient(135deg, var(--accent) 0%, #C4526A 100%); border-radius: var(--radius); padding: 20px 24px; color: white; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+  .rev-highlight h2 { font-size: 13px; font-weight: 500; opacity: .8; margin-bottom: 6px; }
+  .rev-highlight .amount { font-size: 36px; font-weight: 700; }
+  .rev-highlight .note { font-size: 12px; opacity: .7; margin-top: 4px; }
+  .rev-split { display: flex; gap: 20px; }
+  .rev-split-item { text-align: center; }
+  .rev-split-item .rv { font-size: 20px; font-weight: 700; }
+  .rev-split-item .rl { font-size: 11px; opacity: .7; }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid, .chart-grid-3 { grid-template-columns: 1fr; }
+    .rev-highlight { flex-direction: column; gap: 16px; }
+    header { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌸</div>
+    <div><h1>Purejoy Mom & Baby Care</h1><p>Dashboard Analitik</p></div>
+  </div>
+  <div class="header-right">
+    <span class="conn-badge" id="conn-badge">Memuat...</span>
+    <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
+    <a href="https://ghufronwardana08-byte.github.io/purejoy-database/" style="font-size:12px;color:var(--accent);text-decoration:none;">← Input Data</a>
+  </div>
+</header>
+
+<div class="container">
+  <div class="setup-box" id="setup-box" style="display:none;">
+    <h3>⚙️ Setup URL Google Apps Script</h3>
+    <p>Masukkan URL Apps Script yang sama dengan database Anda.</p>
+    <input type="text" id="url-input" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+    <button class="btn-primary" onclick="saveUrl()">Simpan & Hubungkan</button>
+  </div>
+
+  <div id="main-content">
+    <div class="loading"><div class="spinner"></div><p>Memuat data dari Google Sheets...</p></div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZQt0Hxgl928vyy08IdtXKz0gxL7HXJrQaAT-nFHy1veHEakzrHxQAfTygfD1VlGiT/exec";
+const URL_KEY = 'purejoy_script_url';
+
+// Harga per treatment (Rp)
+const HARGA = {
+  "paket 4 hari": 350000,
+  "paket gold 7 hari": 600000,
+  "paket premium 7 hari": 900000,
+  "paket harian": 90000,
+  "newborn": 90000,
+  "mom's treatment": 150000,
+  "pijat bayi sehat": 80000,
+  "pijat terapi": 100000,
+  "pijat balita": 90000,
+  "pijat terapi balita": 110000,
+  "baby": 80000,
+  "default": 100000
+};
+
+let charts = {};
+
+function getUrl() {
+  return localStorage.getItem(URL_KEY) || SCRIPT_URL;
+}
+
+function saveUrl() {
+  const url = document.getElementById('url-input').value.trim();
+  if (url) { localStorage.setItem(URL_KEY, url); loadData(); }
+}
+
+function estimateRevenue(treatment) {
+  if (!treatment) return HARGA.default;
+  const t = treatment.toLowerCase();
+  for (const [key, val] of Object.entries(HARGA)) {
+    if (t.includes(key)) return val;
+  }
+  return HARGA.default;
+}
+
+function formatRp(n) {
+  if (n >= 1000000) return 'Rp ' + (n/1000000).toFixed(1) + ' Jt';
+  return 'Rp ' + n.toLocaleString('id-ID');
+}
+
+function loadData() {
+  document.getElementById('main-content').innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat data...</p></div>';
+  document.getElementById('conn-badge').textContent = 'Memuat...';
+  
+  fetch(getUrl())
+    .then(r => r.json())
+    .then(d => {
+      if (d.status === 'success') {
+        document.getElementById('conn-badge').textContent = '● Terhubung';
+        document.getElementById('conn-badge').style.cssText = 'background:#E8F5EE;color:#2D6A4F;font-size:12px;padding:4px 10px;border-radius:99px;font-weight:500;';
+        renderDashboard(d.data || []);
+      } else throw new Error();
+    })
+    .catch(() => {
+      document.getElementById('conn-badge').textContent = '✕ Gagal';
+      document.getElementById('conn-badge').style.cssText = 'background:#FCEEF0;color:#9B2335;font-size:12px;padding:4px 10px;border-radius:99px;font-weight:500;';
+      document.getElementById('setup-box').style.display = 'block';
+      document.getElementById('main-content').innerHTML = '<div class="loading"><p>Gagal memuat data. Cek koneksi dan URL Apps Script.</p></div>';
+    });
+}
+
+function getField(row, ...keys) {
+  for (const k of keys) {
+    if (row[k] !== undefined && row[k] !== '') return String(row[k]);
+  }
+  return '';
+}
+
+function renderDashboard(data) {
+  if (!data.length) {
+    document.getElementById('main-content').innerHTML = '<div class="loading"><p>Belum ada data. Input reservasi dulu.</p></div>';
+    return;
+  }
+
+  // ── Kalkulasi ──
+  const total = data.length;
+  
+  // Area
+  const areaCounts = {};
+  data.forEach(r => {
+    let area = getField(r, 'Area', 'area') || 'Tidak diketahui';
+    area = area.split('(')[0].trim();
+    if (area.toLowerCase().includes('padang')) area = 'Padang';
+    else if (area.toLowerCase().includes('payakumbuh')) area = 'Payakumbuh';
+    areaCounts[area] = (areaCounts[area] || 0) + 1;
+  });
+
+  // Treatment
+  const treatCounts = {};
+  let totalRevenue = 0;
+  const treatRevenue = {};
+  data.forEach(r => {
+    let t = getField(r, 'Treatment', 'treatment') || 'Lainnya';
+    const tKey = t.toLowerCase().includes('mom') ? "Mom's Treatment" :
+                 t.toLowerCase().includes('newborn') ? 'Newborn Care' :
+                 t.toLowerCase().includes('baby') || t.toLowerCase().includes('bayi') ? "Baby's Treatment" : 'Lainnya';
+    treatCounts[tKey] = (treatCounts[tKey] || 0) + 1;
+    const rev = estimateRevenue(t);
+    totalRevenue += rev;
+    treatRevenue[tKey] = (treatRevenue[tKey] || 0) + rev;
+  });
+
+  // Sumber
+  const sumberCounts = {};
+  data.forEach(r => {
+    let s = getField(r, 'Sumber Info', 'sumber') || 'Tidak diketahui';
+    if (s.toLowerCase().includes('instagram') || s.toLowerCase().includes('ig')) s = 'Instagram';
+    else if (s.toLowerCase().includes('teman') || s.toLowerCase().includes('mulut') || s.toLowerCase().includes('kenalan')) s = 'Rekomendasi Teman';
+    else if (s.toLowerCase().includes('whatsapp') || s.toLowerCase().includes('wa')) s = 'WhatsApp';
+    else if (s.toLowerCase().includes('tiktok')) s = 'TikTok';
+    else if (s.toLowerCase().includes('google')) s = 'Google';
+    sumberCounts[s] = (sumberCounts[s] || 0) + 1;
+  });
+
+  // Bulan trend
+  const bulanCounts = {};
+  const bulanNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  data.forEach(r => {
+    let tgl = getField(r, 'Jadwal Reservasi', 'reservasi');
+    if (!tgl) tgl = getField(r, 'Tanggal Input', 'input_date');
+    if (tgl) {
+      const parts = tgl.split(/[-\/,]/);
+      let bulan = null;
+      if (parts.length >= 2) {
+        // dd/mm/yyyy or dd-mm-yyyy
+        const m = parseInt(parts[1]);
+        if (m >= 1 && m <= 12) bulan = bulanNames[m-1];
+      }
+      if (bulan) bulanCounts[bulan] = (bulanCounts[bulan] || 0) + 1;
+    }
+  });
+
+  // Keluhan
+  const keluhanCounts = {};
+  data.forEach(r => {
+    const km = getField(r, 'Keluhan Mams', 'keluhan_m');
+    const kb = getField(r, 'Keluhan Baby', 'keluhan_b');
+    [km, kb].forEach(k => {
+      if (k && k.toLowerCase() !== 'tidak ada' && k.toLowerCase() !== 'tidak' && k !== '-') {
+        k.split(',').forEach(kk => {
+          const clean = kk.trim().toLowerCase();
+          if (clean && clean.length > 2) keluhanCounts[clean] = (keluhanCounts[clean] || 0) + 1;
+        });
+      }
+    });
+  });
+
+  // Top sumber
+  const topSumber = Object.entries(sumberCounts).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const topKeluhan = Object.entries(keluhanCounts).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+  // Revenue per area
+  const areaRevenue = {};
+  data.forEach(r => {
+    let area = getField(r, 'Area', 'area') || 'Lainnya';
+    area = area.split('(')[0].trim();
+    if (area.toLowerCase().includes('padang')) area = 'Padang';
+    else if (area.toLowerCase().includes('payakumbuh')) area = 'Payakumbuh';
+    areaRevenue[area] = (areaRevenue[area] || 0) + estimateRevenue(getField(r, 'Treatment', 'treatment'));
+  });
+
+  const avgRevenue = Math.round(totalRevenue / total);
+  const topArea = Object.entries(areaCounts).sort((a,b) => b[1]-a[1])[0];
+  const topChannel = Object.entries(sumberCounts).sort((a,b) => b[1]-a[1])[0];
+
+  // ── Render HTML ──
+  document.getElementById('main-content').innerHTML = `
+    <!-- Revenue Highlight -->
+    <div class="rev-highlight">
+      <div>
+        <h2>Estimasi Total Revenue</h2>
+        <div class="amount">${formatRp(totalRevenue)}</div>
+        <div class="note">Berdasarkan ${total} data reservasi · Rata-rata ${formatRp(avgRevenue)}/pelanggan</div>
+      </div>
+      <div class="rev-split">
+        ${Object.entries(treatRevenue).map(([k,v]) => `
+          <div class="rev-split-item">
+            <div class="rv">${formatRp(v)}</div>
+            <div class="rl">${k}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi rose">
+        <div class="icon">👥</div>
+        <div class="val">${total}</div>
+        <div class="lbl">Total Pelanggan</div>
+        <div class="sub">Semua area</div>
+      </div>
+      <div class="kpi green">
+        <div class="icon">📍</div>
+        <div class="val">${topArea ? topArea[1] : 0}</div>
+        <div class="lbl">Area Terbanyak</div>
+        <div class="sub">${topArea ? topArea[0] : '-'}</div>
+      </div>
+      <div class="kpi gold">
+        <div class="icon">📣</div>
+        <div class="val">${topChannel ? topChannel[1] : 0}</div>
+        <div class="lbl">Channel Terbaik</div>
+        <div class="sub">${topChannel ? topChannel[0] : '-'}</div>
+      </div>
+      <div class="kpi purple">
+        <div class="icon">💰</div>
+        <div class="val">${formatRp(avgRevenue)}</div>
+        <div class="lbl">Rata-rata per Pelanggan</div>
+        <div class="sub">Estimasi</div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Sebaran Area</h3>
+        <div class="chart-wrap"><canvas id="chart-area"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Jenis Treatment</h3>
+        <div class="chart-wrap"><canvas id="chart-treat"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Channel / Sumber Info</h3>
+        <div class="chart-wrap"><canvas id="chart-sumber"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Tren Reservasi per Bulan</h3>
+        <div class="chart-wrap"><canvas id="chart-tren"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts Row 3 -->
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Top 5 Channel Pelanggan</h3>
+        <ul class="top-list">
+          ${topSumber.map(([s,n], i) => `
+            <li>
+              <span class="rank ${i===0?'gold-rank':''}">${i+1}</span>
+              <span class="name">${s}</span>
+              <span class="count">${n} pelanggan</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Top 5 Keluhan</h3>
+        <ul class="top-list">
+          ${topKeluhan.length ? topKeluhan.map(([k,n], i) => `
+            <li>
+              <span class="rank ${i===0?'gold-rank':''}">${i+1}</span>
+              <span class="name" style="text-transform:capitalize;">${k}</span>
+              <span class="count">${n}x</span>
+            </li>
+          `).join('') : '<li><span style="color:var(--text2);font-size:13px;">Data keluhan belum cukup</span></li>'}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Revenue Table -->
+    <div class="card" style="margin-bottom:20px;">
+      <h3>Estimasi Revenue per Treatment</h3>
+      <table>
+        <thead>
+          <tr><th>Treatment</th><th>Jumlah</th><th>Harga Satuan</th><th>Estimasi Revenue</th><th>% Kontribusi</th></tr>
+        </thead>
+        <tbody>
+          ${Object.entries(treatCounts).map(([t, n]) => {
+            const rev = treatRevenue[t] || 0;
+            const pct = ((rev/totalRevenue)*100).toFixed(1);
+            const bc = t.includes("Mom") ? "mom" : t.includes("Newborn") ? "newborn" : "baby";
+            return `<tr>
+              <td><span class="badge ${bc}">${t}</span></td>
+              <td>${n}</td>
+              <td>${formatRp(rev/n)}</td>
+              <td><strong>${formatRp(rev)}</strong></td>
+              <td>${pct}%</td>
+            </tr>`;
+          }).join('')}
+          <tr style="background:var(--surface2);">
+            <td><strong>TOTAL</strong></td>
+            <td><strong>${total}</strong></td>
+            <td>${formatRp(avgRevenue)}</td>
+            <td><strong style="color:var(--accent);">${formatRp(totalRevenue)}</strong></td>
+            <td>100%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // ── Draw Charts ──
+  const COLORS = ['#8B5E3C','#C4526A','#2D6A4F','#5B4E8A','#B8860B','#4A90A4','#D4845A'];
+
+  // Area donut
+  new Chart(document.getElementById('chart-area'), {
+    type: 'doughnut',
+    data: { labels: Object.keys(areaCounts), datasets: [{ data: Object.values(areaCounts), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 12 }, padding: 12 } } } }
+  });
+
+  // Treatment donut
+  new Chart(document.getElementById('chart-treat'), {
+    type: 'doughnut',
+    data: { labels: Object.keys(treatCounts), datasets: [{ data: Object.values(treatCounts), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 12 }, padding: 12 } } } }
+  });
+
+  // Sumber bar
+  new Chart(document.getElementById('chart-sumber'), {
+    type: 'bar',
+    data: { 
+      labels: Object.keys(sumberCounts),
+      datasets: [{ data: Object.values(sumberCounts), backgroundColor: COLORS, borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+
+  // Tren line
+  const bulanOrder = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  const trenLabels = bulanOrder.filter(b => bulanCounts[b]);
+  const trenData = trenLabels.map(b => bulanCounts[b]);
+  new Chart(document.getElementById('chart-tren'), {
+    type: 'line',
+    data: {
+      labels: trenLabels.length ? trenLabels : ['Belum ada data'],
+      datasets: [{ data: trenLabels.length ? trenData : [0], borderColor: '#C4526A', backgroundColor: 'rgba(196,82,106,.1)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#C4526A' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+}
+
+// Init
+loadData();
+</script>
+</body>
+</html>
